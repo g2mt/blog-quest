@@ -10,7 +10,8 @@ import { PopupTab, Website, hideFeedsFormId } from "./util/constants";
 import { exportFeeds } from "./util/exportFeeds";
 import { getFeedUrl } from "./util/getFeedUrl";
 import { getHrefProps } from "./util/getHrefProps";
-import { WebsiteExtra } from "./util/getWebsites";
+import { getIsUrlHttpOrHttps } from "./util/getIsUrlHttpOrHttps";
+import { WebsiteExtra, getFeeds } from "./util/getWebsites";
 import {
   useFeedUrlSchemeQuery,
   useHideWebsitesOnClickQuery,
@@ -23,11 +24,14 @@ import {
   getHideWebsitesOnClick,
   getHrefStore,
 } from "./util/storage";
+import { sleep } from "./util/sleep";
 
 const buttonCheckbox = cx("scale-[0.82]");
 const button = cx(
   "flex h-[1.68em] min-w-[1.4em] shrink-0 cursor-pointer items-center justify-center rounded-6 bg-faded p-[1em] my-[0.2em] text-26 font-medium focus-visible:outline-2",
 );
+/** Rate limit mass subscribe tab opens so we don't hammer the fetches. */
+const massSubscribeRateLimitMs = 500;
 
 export function WebsiteListView(props: {
   sniffAndroid: bool;
@@ -200,6 +204,43 @@ export function WebsiteListView(props: {
                       Subscribe Using…
                     </Tabs.Trigger>
                   </Tabs.List>
+
+                  <Popover.Close
+                    className={cx(button, "text-accent")}
+                    onClick={async () => {
+                      const visibleWebsites = websiteQuery.data?.feeds;
+                      if (!visibleWebsites?.length) {
+                        return;
+                      }
+
+                      const feedUrlScheme = await queryClient.fetchQuery(
+                        useFeedUrlSchemeQuery.getFetchOptions(),
+                      );
+
+                      const feeds = (
+                        await Promise.all(
+                          visibleWebsites.map((websiteData) =>
+                            getFeeds(db, websiteData.website),
+                          ),
+                        )
+                      ).flat();
+
+                      for (const feed of feeds) {
+                        const url = getFeedUrl(feed, feedUrlScheme);
+                        if (!getIsUrlHttpOrHttps(url)) {
+                          continue;
+                        }
+
+                        await browser.runtime.sendMessage({
+                          name: "OPEN_TAB",
+                          args: { url: url, metaKey: false },
+                        });
+                        await sleep(massSubscribeRateLimitMs);
+                      }
+                    }}
+                  >
+                    Subscribe all visible
+                  </Popover.Close>
 
                   <Popover.Close
                     className={cx(button, "text-accent")}
