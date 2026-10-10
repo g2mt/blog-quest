@@ -210,6 +210,25 @@ export function WebsiteListView(props: {
                     Hide Websites…
                   </Popover.Close>
 
+                  <Popover.Close
+                    className={cx(button, "text-accent")}
+                    onClick={async () => {
+                      const visibleWebsites = websiteQuery.data?.feeds;
+                      if (!visibleWebsites?.length) {
+                        return;
+                      }
+
+                      const updates = visibleWebsites.map((websiteData) => ({
+                        key: websiteData.website,
+                        changes: { hidden: true },
+                      }));
+                      await db.websites.bulkUpdate(updates);
+                      queryClient.refetchQueries();
+                    }}
+                  >
+                    Hide all visible websites
+                  </Popover.Close>
+
                   <label className={cx(button, "text-accent")}>
                     Hide Websites On Click&nbsp;
                     <input
