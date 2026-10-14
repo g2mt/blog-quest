@@ -244,6 +244,36 @@ export function WebsiteListView(props: {
 
                   <Popover.Close
                     className={cx(button, "text-accent")}
+                    onClick={async () => {
+                      const visibleWebsites = websiteQuery.data?.feeds;
+                      if (!visibleWebsites?.length) {
+                        return;
+                      }
+
+                      const feedUrlScheme = await queryClient.fetchQuery(
+                        useFeedUrlSchemeQuery.getFetchOptions(),
+                      );
+
+                      const feeds = (
+                        await Promise.all(
+                          visibleWebsites.map((websiteData) =>
+                            getFeeds(db, websiteData.website),
+                          ),
+                        )
+                      ).flat();
+
+                      const urls = feeds
+                        .map((feed) => getFeedUrl(feed, feedUrlScheme))
+                        .filter(getIsUrlHttpOrHttps);
+
+                      await navigator.clipboard.writeText(urls.join("\n"));
+                    }}
+                  >
+                    Copy visible to clipboard
+                  </Popover.Close>
+
+                  <Popover.Close
+                    className={cx(button, "text-accent")}
                     onClick={() => {
                       setHideFeeds((prev) => !prev);
                     }}
