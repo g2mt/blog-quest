@@ -250,10 +250,6 @@ export function WebsiteListView(props: {
                         return;
                       }
 
-                      const feedUrlScheme = await queryClient.fetchQuery(
-                        useFeedUrlSchemeQuery.getFetchOptions(),
-                      );
-
                       const feeds = (
                         await Promise.all(
                           visibleWebsites.map((websiteData) =>
@@ -263,7 +259,7 @@ export function WebsiteListView(props: {
                       ).flat();
 
                       const urls = feeds
-                        .map((feed) => getFeedUrl(feed, feedUrlScheme))
+                        .map((feed) => feed.feedUrl)
                         .filter(getIsUrlHttpOrHttps);
 
                       await navigator.clipboard.writeText(urls.join("\n"));
